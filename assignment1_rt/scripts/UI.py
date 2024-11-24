@@ -11,7 +11,7 @@ def select_turtle():
 	
 	while True:
 		print("\n")
-		selected_turtle = input("Which turtle whould you like to move? Select (1) or (2):")
+		selected_turtle = input("Which turtle whould you like to move? Select (1) or (2): ")
 		# Define the publisher for the selected turtle
 		if selected_turtle == "1":
 			pub = rospy.Publisher("turtle1/cmd_vel", Twist, queue_size=1)
