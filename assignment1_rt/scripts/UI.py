@@ -46,7 +46,6 @@ def move_turtle(pub):
 	vel.linear.x = 0
 	vel.linear.y = 0
 	vel.angular.z = 0
-	
 	pub.publish(vel)
 
 
