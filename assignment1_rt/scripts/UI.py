@@ -38,6 +38,15 @@ def move_turtle(pub):
 	vel.linear.y = vel_y
 	vel.angular.z = ang_vel_z
 	
+	# Move the turtle
+	pub.publish(vel)
+	rospy.sleep(1)
+	
+	# Stop the turtle movement after 1 second
+	vel.linear.x = 0
+	vel.linear.y = 0
+	vel.angular.z = 0
+	
 	pub.publish(vel)
 
 
