@@ -23,8 +23,22 @@ def select_turtle():
 			print("\n")
 			print("Please insert a valid input.")
 			
-			
-def move_turtle()
+# Function to move the selected turtle	
+def move_turtle(pub):
+	vel = Twist()
+	try:
+		print("\n Enter the velocities for the selected turtle.")
+		vel_x = float(input("Linear velocity (x): "))
+		vel_y = float(input("Linear velocity (y): "))
+		ang_vel_z = float(input("Angular velocity (z): "))
+	except ValueError:
+		print("Invalid input, please enter numeric values.")
+		return
+	vel.linear.x = vel_x
+	vel.linear.y = vel_y
+	vel.angular.z = ang_vel_z
+	
+	pub.publish(vel)
 
 
 def main():
