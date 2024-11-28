@@ -4,7 +4,6 @@ import rospy
 from turtlesim.msg import Pose
 from turtlesim.srv import TeleportAbsolute
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Float32
 import math
 
 # Initialization of global variables
@@ -12,27 +11,85 @@ turtle1_pose = None
 turtle2_pose = None
 turtle1_teleport = None
 turtle2_teleport = None
+turtle1_velocity = Twist()
+turtle2_velocity = Twist()
 
 # Function to handle position update for both turtles
 def turtle_callback(msg, topic_name):
-
 	global turtle1_pose, turtle2_pose
-	
+
 	if topic_name == "/turtle1/pose":
 		turtle1_pose = msg
 	elif topic_name == "/turtle2/pose":
 		turtle2_pose = msg
-		
+
+
+# Function to handle velocity update for both turtles
+def velocity_callback(msg, turtle_id):
+	global turtle1_velocity, turtle2_velocity
 	
+	if turtle_id == 1:
+		turtle1_velocity = msg
+	elif turtle_id == 2:
+		turtle2_velocity = msg
+
+
 # Function to stop a turtle
 def stop_turtle(pub):
-	stop_vel = Twist()
+	stop_vel = Twist()  # Create a "stop" velocity message
 	pub.publish(stop_vel)
+
+
+def check_distance():
+	global turtle1_pose, turtle2_pose, turtle1_teleport, turtle2_teleport, turtle1_pub, turtle2_pub, turtle1_velocity, turtle2_velocity
+	# Minimum distance between the two turtles
+	min_distance = 1
+	# Computation of the Euclidean distance
+	distance = math.sqrt((turtle1_pose.x - turtle2_pose.x) ** 2 + (turtle1_pose.y - turtle2_pose.y) ** 2)
 	
+	if distance < min_distance:
+		# If turtle 1's velocity is non-zero, stop it
+		if (turtle1_velocity.linear.x != 0 or turtle1_velocity.linear.y != 0 or turtle1_velocity.angular.z != 0):
+			stop_turtle(turtle1_pub)
+			new_x1, new_y1 = get_new_position(turtle1_pose, turtle2_pose, min_distance+0.01)
+			turtle1_teleport(new_x1, new_y1, turtle1_pose.theta)
+			rospy.loginfo("Turtle 1 teleported to (%.2f, %.2f)", new_x1, new_y1)
+			distance = math.sqrt((turtle1_pose.x - turtle2_pose.x) ** 2 + (turtle1_pose.y - turtle2_pose.y) ** 2)
+			rospy.loginfo("distance %.2f", distance)
+			
+		# If turtle 2's velocity is non-zero, stop it
+		elif (turtle2_velocity.linear.x != 0 or turtle2_velocity.linear.y != 0 or turtle2_velocity.angular.z != 0):
+			stop_turtle(turtle2_pub)
+			new_x2, new_y2 = get_new_position(turtle2_pose, turtle1_pose, min_distance+0.1)
+			turtle2_teleport(new_x2, new_y2, turtle2_pose.theta)
+			rospy.loginfo(f"Turtle 2 teleported to (%.2f, %.2f)", new_x2, new_y2)
+			distance = math.sqrt((turtle1_pose.x - turtle2_pose.x) ** 2 + (turtle1_pose.y - turtle2_pose.y) ** 2)
+			rospy.loginfo("distance %.2f", distance)
+
+
+def get_new_position(turtle_pose, other_turtle_pose, min_distance):
+
+	# Calculate the direction vector from the current turtle to the other turtle
+	dx = other_turtle_pose.x - turtle_pose.x
+	dy = other_turtle_pose.y - turtle_pose.y
+	distance_to_other = math.sqrt(dx**2 + dy**2)
+
+	if distance_to_other >= min_distance:
+		return turtle_pose.x, turtle_pose.y  # No need to move if already at the correct distance
+
+	# Normalize the direction vector
+	dx /= distance_to_other
+	dy /= distance_to_other
+
+	# Move the turtle to the correct position
+	new_x = other_turtle_pose.x - dx * min_distance
+	new_y = other_turtle_pose.y - dy * min_distance
+
+	return new_x, new_y
+
 
 # Check boundaries and teleport in the grid
 def check_and_teleport():
-
 	global turtle1_pose, turtle2_pose, turtle1_teleport, turtle2_teleport, turtle1_pub, turtle2_pub
 	
 	# Boundaries
@@ -46,7 +103,7 @@ def check_and_teleport():
 			new_x = min(max(turtle1_pose.x, x_min), x_max)
 			new_y = min(max(turtle1_pose.y, y_min), y_max)
 			turtle1_teleport(new_x, new_y, turtle1_pose.theta)
-			rospy.loginfo("Teletrasportata Turtle 1 sul bordo: (%.2f, %.2f)", new_x, new_y)
+			rospy.loginfo("Turtle 1 teleported on border: (%.2f, %.2f)", new_x, new_y)
 			stop_turtle(turtle1_pub)
 
 	# Check turtle2's position
@@ -56,12 +113,12 @@ def check_and_teleport():
 			new_x = min(max(turtle2_pose.x, x_min), x_max)
 			new_y = min(max(turtle2_pose.y, y_min), y_max)
 			turtle2_teleport(new_x, new_y, turtle2_pose.theta)
-			rospy.loginfo("Teletrasportata Turtle 2 sul bordo: (%.2f, %.2f)", new_x, new_y)
+			rospy.loginfo("Turtle 2 teleported on border: (%.2f, %.2f)", new_x, new_y)
 			stop_turtle(turtle2_pub)
 
 
 def main():
-	global turtle1_teleport, turtle2_teleport, turtle1_pub, turtle2_pub
+	global turtle1_teleport, turtle2_teleport, turtle1_pub, turtle2_pub, turtle1_velocity, turtle2_velocity
 
 	# Initialize the ROS node
 	rospy.init_node("assignment1_distance", anonymous=True)
@@ -80,10 +137,13 @@ def main():
 	# Initialize the subscribers for both turtles
 	rospy.Subscriber("/turtle1/pose", Pose, turtle_callback, "/turtle1/pose")
 	rospy.Subscriber("/turtle2/pose", Pose, turtle_callback, "/turtle2/pose")
+	rospy.Subscriber("/turtle1/cmd_vel", Twist, lambda msg: velocity_callback(msg, 1))
+	rospy.Subscriber("/turtle2/cmd_vel", Twist, lambda msg: velocity_callback(msg, 2))
 
 	while not rospy.is_shutdown():
 		if turtle1_pose and turtle2_pose:
 			check_and_teleport()
+			check_distance()
 		rate.sleep()
 
 if __name__ == '__main__':
