@@ -36,7 +36,7 @@ def velocity_callback(msg, turtle_id):
 
 # Function to stop a turtle
 def stop_turtle(pub):
-	stop_vel = Twist()  # Create a "stop" velocity message
+	stop_vel = Twist()
 	pub.publish(stop_vel)
 
 
@@ -51,37 +51,34 @@ def check_distance():
 		# If turtle 1's velocity is non-zero, stop it
 		if (turtle1_velocity.linear.x != 0 or turtle1_velocity.linear.y != 0 or turtle1_velocity.angular.z != 0):
 			stop_turtle(turtle1_pub)
-			new_x1, new_y1 = get_new_position(turtle1_pose, turtle2_pose, min_distance+0.01)
+			# Compute turtle's position and teleport
+			new_x1, new_y1 = get_new_position(turtle1_pose, turtle2_pose, min_distance + 0.01)
 			turtle1_teleport(new_x1, new_y1, turtle1_pose.theta)
 			rospy.loginfo("Turtle 1 teleported to (%.2f, %.2f)", new_x1, new_y1)
-			distance = math.sqrt((turtle1_pose.x - turtle2_pose.x) ** 2 + (turtle1_pose.y - turtle2_pose.y) ** 2)
-			rospy.loginfo("distance %.2f", distance)
-			
 		# If turtle 2's velocity is non-zero, stop it
 		elif (turtle2_velocity.linear.x != 0 or turtle2_velocity.linear.y != 0 or turtle2_velocity.angular.z != 0):
 			stop_turtle(turtle2_pub)
-			new_x2, new_y2 = get_new_position(turtle2_pose, turtle1_pose, min_distance+0.1)
+			# Compute turtle's position and teleport
+			new_x2, new_y2 = get_new_position(turtle2_pose, turtle1_pose, min_distance + 0.1)
 			turtle2_teleport(new_x2, new_y2, turtle2_pose.theta)
 			rospy.loginfo(f"Turtle 2 teleported to (%.2f, %.2f)", new_x2, new_y2)
-			distance = math.sqrt((turtle1_pose.x - turtle2_pose.x) ** 2 + (turtle1_pose.y - turtle2_pose.y) ** 2)
-			rospy.loginfo("distance %.2f", distance)
 
 
 def get_new_position(turtle_pose, other_turtle_pose, min_distance):
-
 	# Calculate the direction vector from the current turtle to the other turtle
 	dx = other_turtle_pose.x - turtle_pose.x
 	dy = other_turtle_pose.y - turtle_pose.y
 	distance_to_other = math.sqrt(dx**2 + dy**2)
 
-	if distance_to_other >= min_distance:
-		return turtle_pose.x, turtle_pose.y  # No need to move if already at the correct distance
+	# If the turtle is already at the correct distance there is no need to move it
+	#if distance_to_other >= min_distance:
+	#	return turtle_pose.x, turtle_pose.y  # No need to move if already at the correct distance
 
 	# Normalize the direction vector
 	dx /= distance_to_other
 	dy /= distance_to_other
 
-	# Move the turtle to the correct position
+	# Compute the correct position
 	new_x = other_turtle_pose.x - dx * min_distance
 	new_y = other_turtle_pose.y - dy * min_distance
 
@@ -99,7 +96,7 @@ def check_and_teleport():
 	# Check turtle1's position
 	if turtle1_pose:
 		if turtle1_pose.x < x_min or turtle1_pose.x > x_max or turtle1_pose.y < y_min or turtle1_pose.y > y_max:
-			# Compute the new position on the border
+			# Compute the new position on the border and teleport
 			new_x = min(max(turtle1_pose.x, x_min), x_max)
 			new_y = min(max(turtle1_pose.y, y_min), y_max)
 			turtle1_teleport(new_x, new_y, turtle1_pose.theta)
@@ -109,7 +106,7 @@ def check_and_teleport():
 	# Check turtle2's position
 	if turtle2_pose:
 		if turtle2_pose.x < x_min or turtle2_pose.x > x_max or turtle2_pose.y < y_min or turtle2_pose.y > y_max:
-			# Compute the new position on the border
+			# Compute the new position on the border and teleport
 			new_x = min(max(turtle2_pose.x, x_min), x_max)
 			new_y = min(max(turtle2_pose.y, y_min), y_max)
 			turtle2_teleport(new_x, new_y, turtle2_pose.theta)
