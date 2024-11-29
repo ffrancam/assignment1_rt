@@ -70,10 +70,6 @@ def get_new_position(turtle_pose, other_turtle_pose, min_distance):
 	dy = other_turtle_pose.y - turtle_pose.y
 	distance_to_other = math.sqrt(dx**2 + dy**2)
 
-	# If the turtle is already at the correct distance there is no need to move it
-	#if distance_to_other >= min_distance:
-	#	return turtle_pose.x, turtle_pose.y  # No need to move if already at the correct distance
-
 	# Normalize the direction vector
 	dx /= distance_to_other
 	dy /= distance_to_other
