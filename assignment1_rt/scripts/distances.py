@@ -13,6 +13,11 @@ turtle1_teleport = None
 turtle2_teleport = None
 turtle1_velocity = Twist()
 turtle2_velocity = Twist()
+turtle1_obstacles = []
+turtle2_obstacles = []
+
+# Minimum safe distance from obstacles
+SAFE_DISTANCE = 1.0
 
 # Function to handle position update for both turtles
 def turtle_callback(msg, topic_name):
@@ -108,6 +113,24 @@ def check_and_teleport():
 			turtle2_teleport(new_x, new_y, turtle2_pose.theta)
 			rospy.loginfo("Turtle 2 teleported on border: (%.2f, %.2f)", new_x, new_y)
 			stop_turtle(turtle2_pub)
+			
+			
+# Obstacles callback function
+def obstacle_callback(msg, turtle_id):
+	global turtle1_obstacles, turtle2_obstacles
+	
+	if turtle_id == 1:
+		turtle1_obstacles = msg.data
+	elif turtle_id == 2:
+		turtle2_obstacles = msg.data
+        
+# Check distance to obstacles and stop if necessary
+def check_obstacles(turtle_obstacles, turtle_pub):
+	global SAFE_DISTANCE
+
+	if any(distance < SAFE_DISTANCE for distance in turtle_obstacles):
+		rospy.loginfo("Obstacle too close! Stopping turtle.")
+		stop_turtle(turtle_pub)
 
 
 def main():
@@ -132,11 +155,15 @@ def main():
 	rospy.Subscriber("/turtle2/pose", Pose, turtle_callback, "/turtle2/pose")
 	rospy.Subscriber("/turtle1/cmd_vel", Twist, lambda msg: velocity_callback(msg, 1))
 	rospy.Subscriber("/turtle2/cmd_vel", Twist, lambda msg: velocity_callback(msg, 2))
-
+	rospy.Subscriber("/turtle1/obstacles", Float32MultiArray, lambda msg: obstacle_callback(msg, 1))
+	rospy.Subscriber("/turtle2/obstacles", Float32MultiArray, lambda msg: obstacle_callback(msg, 2))
+	
 	while not rospy.is_shutdown():
 		if turtle1_pose and turtle2_pose:
 			check_and_teleport()
 			check_distance()
+			check_obstacles(turtle1_obstacles, turtle1_pub)
+			check_obstacles(turtle2_obstacles, turtle2_pub)
 		rate.sleep()
 
 if __name__ == '__main__':
